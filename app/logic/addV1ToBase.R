@@ -63,7 +63,7 @@ addV1ToBase <- function(annotations, rawdata, con) {
   annotations <- "app/data/annotations/GSE225810_classes.csv"
   annotations <- read.table(annotations, header = TRUE, sep = ",")
   # Check if required columns are present
-  required_columns <- c("class", "subclass", "sample")
+  required_columns <- c("class", "subclass", "sample", "cohort")
   missing_columns <- setdiff(required_columns, names(annotations))
   if (length(missing_columns) > 0) {
     return("Check file format")

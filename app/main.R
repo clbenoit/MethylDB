@@ -1,24 +1,56 @@
 box::use(
   shiny[bootstrapPage, div, moduleServer, NS, renderUI, tags, uiOutput,
-        shinyOptions],
+        shinyOptions, p, icon],
   config[get],
   cachem[cache_disk],
   DBI[dbConnect],
-  RSQLite[SQLite]
+  RSQLite[SQLite],
+  bslib[page_fluid, page_navbar, nav_panel, nav_spacer, nav_menu, nav_item,
+        bs_theme]
 )
 
 
 box::use(
   app/logic/appDataManager[appDataManager],
   app/view/tsne_view,
+  app/view/select_samples,
+)
+
+link_github <- tags$a(
+  icon("github"),"Code",
+  href = "https://github.com/clbenoit/MethylDB",
+  target = "_blank"
+)
+link_doc <- tags$a(
+  icon("book")," Documentation",
+  href = "https://clbenoit.github.io/portfolio/",
+  target = "_blank"
 )
 
 #' @export
 ui <- function(id) {
   ns <- NS(id)
   bootstrapPage(
-    tsne_view$ui(ns("tsne_view"))
-  )
+  page_navbar(
+    title = "MethylDB",
+    theme = bs_theme(bootswatch = "minty",
+                     bg = "#FCFDFD",
+                     fg = "rgb(25, 125, 85)"),
+    underline = TRUE,
+    nav_panel(title = "Select Samples",
+              select_samples$ui(ns("select_samples"))),
+    nav_panel(title = "Run T SNE",
+              tsne_view$ui(ns("tsne_view"))),
+    nav_panel(title = "Run differential merhylation analysis",
+              p("Third tab content")),
+    nav_spacer(),
+    nav_menu(
+      title = "Links",
+      align = "right",
+      nav_item(link_github),
+      nav_item(link_doc)
+      )
+    ))
 }
 
 #' @export
@@ -58,6 +90,7 @@ server <- function(id) {
 
 
     tsne_view$server("tsne_view", appData = appDataManager, main_session = session)
+    select_samples$server("select_samples", appData = appDataManager, main_session = session)
 
   })
 }
