@@ -6,7 +6,8 @@ box::use(
         sliderInput, req, numericInput, selectInput, selectizeInput, observeEvent,
         updateSelectizeInput, fluidPage, bindCache, reactive,
         observe, reactiveValues, bindEvent, isolate, icon,
-        mainPanel, div, actionButton, HTML],
+        mainPanel, div, actionButton,
+        HTML, checkboxGroupInput, updateCheckboxGroupInput, need, validate],
   dplyr[filter, `%>%`, select, case_when, mutate, arrange,
         inner_join, rename, summarise, group_by_at, n, sym],
   reactable,
@@ -25,7 +26,7 @@ ui <- function(id) {
          card_header("Available samples in database"),
          card_body(reactable$reactableOutput(ns("annotations")))
     ),
-    card(id = "card1", width = 12, full_screen = FALSE, min_height = '150px',
+    card(id = "card1", width = 12, full_screen = FALSE, min_height = '250px',
         card_header("Select samples to compute T SNE"),
         card_body(
           fluidRow(
@@ -37,16 +38,12 @@ ui <- function(id) {
               pickerInput(ns("select_subclasses"), label = "subclass",
                           selected = NULL, choices = NULL, multiple = TRUE,
                           width = "100%"),
-              pickerInput(ns("select_cohorts"), label = "cohort",
-                          selected = NULL, choices = NULL, multiple = TRUE,
-                          width = "100%")
+              checkboxGroupInput(ns("select_cohorts"), "cohorts", width = "100%", inline = TRUE)
               )
             ))),
-        #fluidRow(actionButton(ns("btn1"), "More info about selected samples", class = "btn btn-link")),
-        card(id = "card2", width = 12, full_screen = TRUE, min_height = '300px',
+        card(id = "card2", width = 12, full_screen = TRUE, min_height = '500px',
              card_header("Some metrics about selected cohort"),
              card_body(
-            #div(id = "card-info", style = "display: block;",
             fluidRow(uiOutput(ns('selected_samples_info'))),
             fluidRow(layout_column_wrap(
                              width = 1/2,
@@ -54,17 +51,7 @@ ui <- function(id) {
                               plotlyOutput(ns("subclasses_pie")),
                               plotlyOutput(ns("cohorts_pie")))
                              )
-                           #)
-                   ))#,
-            # tags$script(HTML("
-            # Shiny.addCustomMessageHandler('toggleDiv', function(message) {
-            #   var div = document.getElementById('card2');
-            #   if (div.style.display === 'none') {
-            #     div.style.display = 'block';
-            #   } else {
-            #     div.style.display = 'none';
-            #   }
-            # });"))
+                   ))
   )
 }
 
@@ -73,10 +60,9 @@ server <- function(id, con, appData, main_session) {
   moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
-    req(appData$annotations)
 
     all_samples_dataframe <- reactive({
-      return(appData$annotations)
+      return(appData$data$annotations)
     }) #%>% bindCache({list()})
 
     observe({
@@ -88,9 +74,8 @@ server <- function(id, con, appData, main_session) {
     })
 
     observe({
-      req(appData$annotations)
+      req(appData$data$annotations)
       print("update select_classes input")
-      print(appData$annotations$class)
       updatePickerInput(inputId = "select_classes",
                         session = session,
                         choices = c("All",
@@ -101,27 +86,24 @@ server <- function(id, con, appData, main_session) {
                         choices = c("All",
                                     unique(appData$annotations$subclass)),
                         selected = "All")
-      updatePickerInput(inputId = "select_cohorts",
-                        session = session,
-                        choices = c("All",
-                                    unique(appData$annotations$cohort)),
-                        selected = "All")
+      updateCheckboxGroupInput(inputId = "select_cohorts",
+                               session = session,
+                               inline = TRUE,
+                               choices = c("All",
+                                           unique(appData$annotations$cohort)),
+                               selected = "All")
     })
 
     observeEvent(input$select_classes, {
       req(input$select_classes)
-      print("appData$selectors$classes <- input$select_classes")
       appData$selectors$classes <- input$select_classes
     })
     observeEvent(input$select_subclasses, {
       req(input$select_subclasses)
-      print("appData$selectors$subclasses <- input$select_subclasses")
       appData$selectors$subclasses <- input$select_subclasses
-      print(appData$selectors$subclasses)
     })
     observeEvent(input$select_cohorts, {
       req(input$select_cohorts)
-      print("appData$selectors$subclasses <- input$select_cohorts")
       appData$selectors$cohorts<- input$select_cohorts
       print(appData$selectors$cohorts)
     })
@@ -131,28 +113,35 @@ server <- function(id, con, appData, main_session) {
       req(appData$selectors$classes)
       req(appData$selectors$cohorts)
       req(all_samples_dataframe())
+      shiny::validate(
+        shiny::need(!is.null(input$select_classes) && length(input$select_classes) > 0, "Please select at least one class."),
+        shiny::need(!is.null(input$select_subclasses) && length(input$select_subclasses) > 0, "Please select at least one subclass."),
+        shiny::need(!is.null(input$select_cohorts) && length(input$select_cohorts) > 0, "Please select at least one cohort.")
+      )
       print("filtering samples...")
       current_samples_dataframe <- all_samples_dataframe() %>%
         {
-          if (appData$selectors$classes != "All") {
-            . %>% filter(class %in% appData$selectors$classes)
+          if (!("All" %in% appData$selectors$classes)) {
+            filter(., class %in% appData$selectors$classes)
           } else {
             .
           }
         } %>%
         {
-          if (appData$selectors$subclasses != "All") {
-            . %>% filter(subclass %in% appData$selectors$subclasses)
+          if (!("All" %in% appData$selectors$subclasses)) {
+            filter(., subclass %in% appData$selectors$subclasses)
           } else {
             .
           }
         } %>%
-        {  if (appData$selectors$cohorts != "All") {
-            . %>% filter(class %in% appData$selectors$cohorts)
+        {
+          if (!("All" %in% appData$selectors$cohorts)) {
+            filter(., cohort %in% appData$selectors$cohorts)
           } else {
             .
           }
-        } %>%
+        }
+      appData$data$current_samples_dataframe <- current_samples_dataframe
       return(current_samples_dataframe)
     })
 
@@ -166,15 +155,12 @@ server <- function(id, con, appData, main_session) {
     })
 
     output$classes_pie <- renderPlotly({
-      # Group by selected column and count occurrences
       req(current_samples_dataframe())
       print("rendering classes pie")
       data <- current_samples_dataframe() %>%
         group_by_at("class") %>%
-        summarise(count = n()) #%>%
-        #filter(!is.na(!!sym("class"))) # Remove NA values
+        summarise(count = n())
 
-      # Plot pie chart
       plot_ly(data, labels = ~class, values = ~count, type = 'pie') %>%
         layout(title = paste("Pie chart of", "classes"),
                showlegend = TRUE)
@@ -182,41 +168,26 @@ server <- function(id, con, appData, main_session) {
 
 
     output$subclasses_pie <- renderPlotly({
-      # Group by selected column and count occurrences
       req(current_samples_dataframe())
-      print(utils::head(current_samples_dataframe()))
       data <- current_samples_dataframe() %>%
         group_by_at("subclass") %>%
-        summarise(count = n()) #%>%
-        #filter(!is.na(!!sym("subclass"))) # Remove NA values
+        summarise(count = n())
 
-      # Plot pie chart
       plot_ly(data, labels = ~subclass, values = ~count, type = 'pie') %>%
         layout(title = paste("Pie chart of", "subclasses"),
                showlegend = TRUE)
       })
 
     output$cohorts_pie <- renderPlotly({
-      # Group by selected column and count occurrences
       req(current_samples_dataframe())
-      print(utils::head(current_samples_dataframe()))
       data <- current_samples_dataframe() %>%
         group_by_at("cohort") %>%
-        summarise(count = n()) #%>%
-      #filter(!is.na(!!sym("subclass"))) # Remove NA values
+        summarise(count = n())
 
-      # Plot pie chart
       plot_ly(data, labels = ~cohort, values = ~count, type = 'pie') %>%
         layout(title = paste("Pie chart of", "cohorts"),
                showlegend = TRUE)
     })
-
-  # observeEvent(input$btn1, {
-  #   print(input$btn1)
-  #   session$sendCustomMessage("toggleDiv", list())
-  # })
-  #
-  # session$sendCustomMessage("toggleDiv", list())
 
   })
 }

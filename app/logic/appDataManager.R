@@ -15,9 +15,8 @@ appDataManager <- R6::R6Class(
   classname = "DataManager",
   public = list(
     con = NULL,
-    selectors = reactiveValues(classes = "All" , subslasses = "All"),
-    annotations = NULL,
-    BValsC = NULL,
+    selectors = reactiveValues(classes = "All" , subclasses = "All", cohorts = "All"),
+    data = reactiveValues(current_samples_dataframe = NULL, annotations = NULL, BValsC = NULL),
     loadAppData = function(con) {
       print("inside load DB")
       self$con <- con
@@ -29,14 +28,14 @@ appDataManager <- R6::R6Class(
       # Different sidebars according to selected tab
       if (dbExistsTable(conn = con, "annotations")) {
         print("Loading annotations")
-        self$annotations <- DBI::dbReadTable(conn = con, name = "annotations")
+        self$data$annotations <- DBI::dbReadTable(conn = con, name = "annotations")
       } else {
         print("Can't find annotations table in base, check you database")
       }
 
       if (dbExistsTable(conn = con, "BValsC")) {
         print("Loading Beta values")
-        self$BValsC <- DBI::dbReadTable(conn = con, name = "BValsC")
+        self$data$BValsC <- DBI::dbReadTable(conn = con, name = "BValsC")
       } else {
         print("Can't find beta values table in base, check you database")
       }

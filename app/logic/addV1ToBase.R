@@ -11,7 +11,7 @@ box::use(
 )
 
 #' @export
-addV1ToBase <- function(annotations, rawdata, con) {
+addV1ToBase <- function(annotations, rawdata, db_path) {
 
   library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
   # library(IlluminaHumanMethylation450kmanifest)
@@ -75,8 +75,8 @@ addV1ToBase <- function(annotations, rawdata, con) {
   BValsC <- BValsC[, c(annotations$sample,"cgID")]
 
   # Save data into database
-  db_name <- file.path("app/data/testdata", "testdb.db")
-  con <- dbConnect(SQLite(), db_name)
+  db_path <- file.path("app/data/testdata", "testdb.db")
+  con <- dbConnect(SQLite(), db_path)
 
   if (dbExistsTable(conn = con, "BValsC")) {
     print("merging BValsC tables")

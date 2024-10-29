@@ -6,7 +6,7 @@ box::use(
   DBI[dbConnect],
   RSQLite[SQLite],
   bslib[page_fluid, page_navbar, nav_panel, nav_spacer, nav_menu, nav_item,
-        bs_theme]
+        bs_theme],
 )
 
 
@@ -39,10 +39,10 @@ ui <- function(id) {
     underline = TRUE,
     nav_panel(title = "Select Samples",
               select_samples$ui(ns("select_samples"))),
-    nav_panel(title = "Run T SNE",
+    nav_panel(title = "T SNE",
               tsne_view$ui(ns("tsne_view"))),
-    nav_panel(title = "Run differential merhylation analysis",
-              p("Third tab content")),
+    nav_panel(title = "Differential merhylation analysis",
+              p("Coming soon")),
     nav_spacer(),
     nav_menu(
       title = "Links",
