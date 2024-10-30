@@ -152,7 +152,7 @@ server <- function(id, con, appData, main_session) {
                       showcase = icon("person"), width = "100%",
                       showcase_layout = c("left center"),
                       theme = "primary")
-    })
+    }) %>% bindCache(current_samples_dataframe())
 
     output$classes_pie <- renderPlotly({
       req(current_samples_dataframe())
@@ -176,7 +176,7 @@ server <- function(id, con, appData, main_session) {
       plot_ly(data, labels = ~subclass, values = ~count, type = 'pie') %>%
         layout(title = paste("Pie chart of", "subclasses"),
                showlegend = TRUE)
-      })
+      }) %>% bindCache(current_samples_dataframe())
 
     output$cohorts_pie <- renderPlotly({
       req(current_samples_dataframe())
@@ -187,7 +187,7 @@ server <- function(id, con, appData, main_session) {
       plot_ly(data, labels = ~cohort, values = ~count, type = 'pie') %>%
         layout(title = paste("Pie chart of", "cohorts"),
                showlegend = TRUE)
-    })
+    }) %>% bindCache(current_samples_dataframe())
 
   })
 }
