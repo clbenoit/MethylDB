@@ -58,12 +58,11 @@ ui <- function(id) {
 #' @export
 server <- function(id, con, appData, main_session) {
   moduleServer(id, function(input, output, session) {
-
     ns <- session$ns
 
     all_samples_dataframe <- reactive({
       return(appData$data$annotations)
-    }) #%>% bindCache({list()})
+    })
 
     observe({
       req(all_samples_dataframe())
@@ -108,17 +107,29 @@ server <- function(id, con, appData, main_session) {
       print(appData$selectors$cohorts)
     })
 
+    # Reactive for validation messages
+    validation_message <- reactive({
+      if (is.null(input$select_classes) || length(input$select_classes) == 0) {
+        return("Please select at least one class.")
+      }
+      if (is.null(input$select_subclasses) || length(input$select_subclasses) == 0) {
+        return("Please select at least one subclass.")
+      }
+      if (is.null(input$select_cohorts) || length(input$select_cohorts) == 0) {
+        return("Please select at least one cohort.")
+      }
+      return(NULL)  # No issues
+    })
+
+    # Reactive to compute current_samples_dataframe
     current_samples_dataframe <- reactive({
-      req(appData$selectors$subclasses)
-      req(appData$selectors$classes)
-      req(appData$selectors$cohorts)
-      req(all_samples_dataframe())
-      shiny::validate(
-        shiny::need(!is.null(input$select_classes) && length(input$select_classes) > 0, "Please select at least one class."),
-        shiny::need(!is.null(input$select_subclasses) && length(input$select_subclasses) > 0, "Please select at least one subclass."),
-        shiny::need(!is.null(input$select_cohorts) && length(input$select_cohorts) > 0, "Please select at least one cohort.")
-      )
-      print("filtering samples...")
+      # Check validation message and return an empty dataframe if validation fails
+      if (!is.null(validation_message())) {
+        appData$data$current_samples_dataframe <- data.frame()
+        return(data.frame())
+      }
+
+      print("Filtering samples...")
       current_samples_dataframe <- all_samples_dataframe() %>%
         {
           if (!("All" %in% appData$selectors$classes)) {
@@ -141,22 +152,37 @@ server <- function(id, con, appData, main_session) {
             .
           }
         }
+
       appData$data$current_samples_dataframe <- current_samples_dataframe
       return(current_samples_dataframe)
     })
 
+    # UI to display validation message if any
+    output$validation_message_ui <- renderUI({
+      msg <- validation_message()
+      if (!is.null(msg)) {
+        div(class = "alert alert-warning", msg)
+      }
+    })
+
+    # Place this in the UI where you want the validation message to appear
     output$selected_samples_info <- renderUI({
-        req(current_samples_dataframe())
-              value_box(title = "N° of selected samples",
-                      value = as.character(nrow(current_samples_dataframe())),
-                      showcase = icon("person"), width = "100%",
-                      showcase_layout = c("left center"),
-                      theme = "primary")
+      tagList(
+        uiOutput(ns("validation_message_ui")),  # Display validation message here
+        value_box(
+          title = "N° of selected samples",
+          value = as.character(nrow(current_samples_dataframe())),
+          showcase = icon("person"), width = "100%",
+          showcase_layout = c("left center"),
+          theme = "primary"
+        )
+      )
     }) %>% bindCache(current_samples_dataframe())
 
+    # Your plotting code remains the same
     output$classes_pie <- renderPlotly({
       req(current_samples_dataframe())
-      print("rendering classes pie")
+      if(nrow(current_samples_dataframe()) > 0){
       data <- current_samples_dataframe() %>%
         group_by_at("class") %>%
         summarise(count = n())
@@ -164,11 +190,13 @@ server <- function(id, con, appData, main_session) {
       plot_ly(data, labels = ~class, values = ~count, type = 'pie') %>%
         layout(title = paste("Pie chart of", "classes"),
                showlegend = TRUE)
+      }
     })
-
 
     output$subclasses_pie <- renderPlotly({
       req(current_samples_dataframe())
+      if(nrow(current_samples_dataframe()) > 0){
+
       data <- current_samples_dataframe() %>%
         group_by_at("subclass") %>%
         summarise(count = n())
@@ -176,10 +204,13 @@ server <- function(id, con, appData, main_session) {
       plot_ly(data, labels = ~subclass, values = ~count, type = 'pie') %>%
         layout(title = paste("Pie chart of", "subclasses"),
                showlegend = TRUE)
-      }) %>% bindCache(current_samples_dataframe())
+      }
+    }) %>% bindCache(current_samples_dataframe())
 
     output$cohorts_pie <- renderPlotly({
       req(current_samples_dataframe())
+      if(nrow(current_samples_dataframe()) > 0){
+
       data <- current_samples_dataframe() %>%
         group_by_at("cohort") %>%
         summarise(count = n())
@@ -187,8 +218,7 @@ server <- function(id, con, appData, main_session) {
       plot_ly(data, labels = ~cohort, values = ~count, type = 'pie') %>%
         layout(title = paste("Pie chart of", "cohorts"),
                showlegend = TRUE)
+      }
     }) %>% bindCache(current_samples_dataframe())
-
   })
 }
-

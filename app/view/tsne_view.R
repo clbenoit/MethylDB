@@ -4,7 +4,7 @@ box::use(
   shiny[h3, moduleServer, tagList, conditionalPanel, tabsetPanel, tabPanel,
         span, br, column, fluidRow, h4, uiOutput, renderUI, NS, tags, updateTabsetPanel,
         sliderInput, req, numericInput, selectInput, selectizeInput, observeEvent,
-        updateSelectizeInput, fluidPage, bindCache, reactive,
+        updateSelectizeInput, fluidPage, bindCache, reactive, updateSelectInput,
         observe, reactiveValues, bindEvent, isolate, radioButtons, div],
   dplyr[filter, `%>%`, select, case_when, mutate, arrange, inner_join, rename],
   reactable,
@@ -12,6 +12,7 @@ box::use(
   plotly[plotlyOutput, renderPlotly, layout, plot_ly,
          plotlyProxy, plotlyProxyInvoke],
   htmlwidgets[onRender],
+  bslib[card, card_header, card_body, value_box, layout_column_wrap]
 )
 
 box::use(
@@ -24,20 +25,35 @@ box::use(
 ui <- function(id) {
   ns <- NS(id)
   tagList(
-    fluidRow(
-      column(width = 12,
-             div(style = "width: 100%; text-align: center;",
-                 radioButtons(ns("color_by"), label = "Color TSNE by",
-                              inline = TRUE,
-                              choices = c("class", "subclass", "cohort"),
-                              width = "100%")
+    br(),
+    card(id = "cardcustomizeTsne", width = 12, full_screen = FALSE, min_height = '250px',
+         card_header("Select samples to compute T SNE"),
+         card_body(
+           fluidRow(
+             layout_column_wrap(
+               width = 1/2,
+               radioButtons(ns("color_by"), label = "Color TSNE by",
+                            inline = TRUE,
+                            choices = c("class", "subclass", "cohort"),
+                            width = "100%"),
+               selectInput(ns("sample_selector"), "Select Samples to annotate on graph",
+                           choices = NULL, width = '100%',
+                           multiple = TRUE),
              )
-      ),
+           ))),
       br(),
+      # column(width = 12,
+      #        plotlyOutput(ns("current_tsne_plot"), height = "800px"))
+    conditionalPanel(
+      condition = sprintf("output['%s'] < 4", ns("sample_count")),
       column(width = 12,
-             selectInput(ns("sample_selector"), "Select Samples to annotate on graph",
-                         choices = NULL, width = '100%',
-                         multiple = TRUE),  # Enable multiple selection
+             tags$div("Not enough samples to render the t-SNE plot. Please select at least 4 samples.",
+                      style = "color: red; font-weight: bold; text-align: center;"))
+    ),
+    # Conditional Panel to show the plot if there are at least 4 samples
+    conditionalPanel(
+      condition = sprintf("output['%s'] >= 4", ns("sample_count")),
+      column(width = 12,
              plotlyOutput(ns("current_tsne_plot"), height = "800px"))
     )
   )
@@ -50,9 +66,16 @@ server <- function(id, con, appData, main_session) {
     ns <- session$ns
     annotations <- shiny::reactiveVal(list())  # Store plot annotations
 
+    output$sample_count <- reactive({
+      req(appData$data$current_samples_dataframe)
+      print(nrow(appData$data$current_samples_dataframe))
+      return(nrow(appData$data$current_samples_dataframe))
+    })
+    shiny::outputOptions(output, "sample_count", suspendWhenHidden = FALSE)
+
     # Update selectInput choices dynamically
     observeEvent(appData$data$current_samples_dataframe$sample, {
-      shiny::updateSelectInput(session, inputId = "sample_selector",
+      updateSelectInput(session, inputId = "sample_selector",
                                choices = appData$data$current_samples_dataframe$sample)
     })
 
@@ -110,7 +133,7 @@ server <- function(id, con, appData, main_session) {
       # Update selectInput to include clicked sample if not already selected
       if (!sample_name %in% selected_samples) {
         selected_samples <- c(selected_samples, sample_name)
-        shiny::updateSelectInput(session, "sample_selector", selected = selected_samples)
+        updateSelectInput(session, "sample_selector", selected = selected_samples)
       }
     })
 
