@@ -38,7 +38,8 @@ ui <- function(id) {
               pickerInput(ns("select_subclasses"), label = "subclass",
                           selected = NULL, choices = NULL, multiple = TRUE,
                           width = "100%"),
-              checkboxGroupInput(ns("select_cohorts"), "cohorts", width = "100%", inline = TRUE)
+              checkboxGroupInput(ns("select_cohorts"), "cohorts", width = "100%", inline = TRUE),
+              checkboxGroupInput(ns("select_chips"), "chips", width = "100%", inline = TRUE)
               )
             ))),
         card(id = "card2", width = 12, full_screen = TRUE, min_height = '500px',
@@ -49,7 +50,8 @@ ui <- function(id) {
                              width = 1/2,
                               plotlyOutput(ns("classes_pie")),
                               plotlyOutput(ns("subclasses_pie")),
-                              plotlyOutput(ns("cohorts_pie")))
+                              plotlyOutput(ns("cohorts_pie")),
+                              plotlyOutput(ns("chips_pie")))
                              )
                    ))
   )
@@ -75,21 +77,28 @@ server <- function(id, con, appData, main_session) {
     observe({
       req(appData$data$annotations)
       print("update select_classes input")
+      print(unique(appData$data$annotations$class))
       updatePickerInput(inputId = "select_classes",
                         session = session,
                         choices = c("All",
-                                    unique(appData$annotations$class)),
+                                    unique(appData$data$annotations$class)),
                         selected = "All")
       updatePickerInput(inputId = "select_subclasses",
                         session = session,
                         choices = c("All",
-                                    unique(appData$annotations$subclass)),
+                                    unique(appData$data$annotations$subclass)),
                         selected = "All")
       updateCheckboxGroupInput(inputId = "select_cohorts",
                                session = session,
                                inline = TRUE,
                                choices = c("All",
-                                           unique(appData$annotations$cohort)),
+                                           unique(appData$data$annotations$cohort)),
+                               selected = "All")
+      updateCheckboxGroupInput(inputId = "select_chips",
+                               session = session,
+                               inline = TRUE,
+                               choices = c("All",
+                                           unique(appData$data$annotations$chip)),
                                selected = "All")
     })
 
@@ -148,6 +157,13 @@ server <- function(id, con, appData, main_session) {
         {
           if (!("All" %in% appData$selectors$cohorts)) {
             filter(., cohort %in% appData$selectors$cohorts)
+          } else {
+            .
+          }
+        } %>%
+        {
+          if (!("All" %in% appData$selectors$chips)) {
+            filter(., chip %in% appData$selectors$chips)
           } else {
             .
           }
@@ -220,5 +236,20 @@ server <- function(id, con, appData, main_session) {
                showlegend = TRUE)
       }
     }) %>% bindCache(current_samples_dataframe())
+
+    output$chips_pie <- renderPlotly({
+      req(current_samples_dataframe())
+      if(nrow(current_samples_dataframe()) > 0){
+
+        data <- current_samples_dataframe() %>%
+          group_by_at("chip") %>%
+          summarise(count = n())
+
+        plot_ly(data, labels = ~chip, values = ~count, type = 'pie') %>%
+          layout(title = paste("Pie chart of", "chips"),
+                 showlegend = TRUE)
+      }
+    }) %>% bindCache(current_samples_dataframe())
+
   })
 }

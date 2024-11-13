@@ -16,7 +16,7 @@ appDataManager <- R6::R6Class(
   classname = "DataManager",
   public = list(
     con = NULL,
-    selectors = reactiveValues(classes = "All" , subclasses = "All", cohorts = "All"),
+    selectors = reactiveValues(classes = "All" , subclasses = "All", cohorts = "All", chips = "All"),
     data = reactiveValues(current_samples_dataframe = NULL, annotations = NULL, BValsC = NULL, BValsC_V2 = NULL),
     loadAppData = function(con) {
       print("inside load DB")
@@ -35,36 +35,24 @@ appDataManager <- R6::R6Class(
       }
 
       if (dbExistsTable(conn = con, "BValsC")) {
-        print("Loading Beta values")
+        print("Loading V1 Beta values")
         self$data$BValsC <- DBI::dbReadTable(conn = con, name = "BValsC")
       } else {
-        print("Can't find beta values table in base, check you database")
+        print("Can't find V1 beta values table in base, check you database")
       }
 
       if (dbExistsTable(conn = con, "BValsC_V2")) {
-        print("Loading Beta values")
+        print("Loading V2 Beta values")
         BValsC_V2 <- DBI::dbReadTable(conn = con, name = "BValsC_V2")
         # print(utils::head(BValsC_V2))
 
         rownames(BValsC_V2) <- BValsC_V2$cgID
         BValsC_V2$cgID <- NULL
-        #print(utils::head(BValsC_V2))
-        #print(as.numeric(BValsC_V2))
-        # print(class(BValsC_V2$GSM2402855))
-        #BValsC_V2 <- data.frame(lapply(BValsC_V2, as.numeric))
-        # print(class(BValsC_V2$GSM2402855))
-        # library(sesame)
-        # sesameData::sesameDataCache()
-        print("zebi")
-        print(utils::head(BValsC_V2))
-        print(nrow(BValsC_V2))
         #save(file = "/home/ptngs/test.rda", BValsC_V2)
         #a <- as.data.frame(mLiftOver(x = BValsC_V2, target_platform = "HM450"))
         BValsC_V2 <- as.data.frame(mLiftOver(x = as.matrix(BValsC_V2), target_platform = "HM450"))
         print(nrow(BValsC_V2))
         print(utils::head(BValsC_V2))
-        #print(utils::head(BValsC_V2))
-        #print(utils::head(BValsC_V2))
         self$data$BValsC_V2 <- BValsC_V2
       } else {
         print("Can't find V2 beta values table in base, check you database")

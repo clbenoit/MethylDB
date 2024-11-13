@@ -52,6 +52,30 @@
       ],
       "Hash": "b7df9c597fb5533fc8248d73b8c703ac"
     },
+    "AnnotationHub": {
+      "Package": "AnnotationHub",
+      "Version": "3.12.0",
+      "Source": "Bioconductor",
+      "Repository": "Bioconductor 3.19",
+      "Requirements": [
+        "AnnotationDbi",
+        "BiocFileCache",
+        "BiocGenerics",
+        "BiocManager",
+        "BiocVersion",
+        "RSQLite",
+        "S4Vectors",
+        "curl",
+        "dplyr",
+        "grDevices",
+        "httr",
+        "methods",
+        "rappdirs",
+        "utils",
+        "yaml"
+      ],
+      "Hash": "346ca347b61989d1da5f655d7bac6a8c"
+    },
     "AsioHeaders": {
       "Package": "AsioHeaders",
       "Version": "1.22.1-2",
@@ -78,6 +102,26 @@
         "utils"
       ],
       "Hash": "9bc4cabd3bfda461409172213d932813"
+    },
+    "BiocFileCache": {
+      "Package": "BiocFileCache",
+      "Version": "2.12.0",
+      "Source": "Bioconductor",
+      "Repository": "Bioconductor 3.19",
+      "Requirements": [
+        "DBI",
+        "R",
+        "RSQLite",
+        "curl",
+        "dbplyr",
+        "dplyr",
+        "filelock",
+        "httr",
+        "methods",
+        "stats",
+        "utils"
+      ],
+      "Hash": "9c3414bcfae204d56080dd0f0a220136"
     },
     "BiocGenerics": {
       "Package": "BiocGenerics",
@@ -240,6 +284,23 @@
         "sparseMatrixStats"
       ],
       "Hash": "5d9536664ccddb0eaa68a90afe4ee76e"
+    },
+    "ExperimentHub": {
+      "Package": "ExperimentHub",
+      "Version": "2.12.0",
+      "Source": "Bioconductor",
+      "Repository": "Bioconductor 3.19",
+      "Requirements": [
+        "AnnotationHub",
+        "BiocFileCache",
+        "BiocGenerics",
+        "BiocManager",
+        "S4Vectors",
+        "methods",
+        "rappdirs",
+        "utils"
+      ],
+      "Hash": "988693270e5886a33c536dda6b3c9f98"
     },
     "GEOquery": {
       "Package": "GEOquery",
@@ -1270,6 +1331,34 @@
       ],
       "Hash": "2e00b378fc3be69c865120d9f313039a"
     },
+    "dbplyr": {
+      "Package": "dbplyr",
+      "Version": "2.5.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "DBI",
+        "R",
+        "R6",
+        "blob",
+        "cli",
+        "dplyr",
+        "glue",
+        "lifecycle",
+        "magrittr",
+        "methods",
+        "pillar",
+        "purrr",
+        "rlang",
+        "tibble",
+        "tidyr",
+        "tidyselect",
+        "utils",
+        "vctrs",
+        "withr"
+      ],
+      "Hash": "39b2e002522bfd258039ee4e889e0fd1"
+    },
     "desc": {
       "Package": "desc",
       "Version": "1.4.3",
@@ -1396,6 +1485,16 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "aa5e1cd11c2d15497494c5292d7ffcc8"
+    },
+    "filelock": {
+      "Package": "filelock",
+      "Version": "1.0.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R"
+      ],
+      "Hash": "192053c276525c8495ccfd523aa8f2d1"
     },
     "fontawesome": {
       "Package": "fontawesome",
@@ -2378,6 +2477,19 @@
       ],
       "Hash": "603d56041d7d4fa3ceb1864b3f6ee6b1"
     },
+    "reshape2": {
+      "Package": "reshape2",
+      "Version": "1.4.4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "Rcpp",
+        "plyr",
+        "stringr"
+      ],
+      "Hash": "bb5996d0bd962d214a11140d77589917"
+    },
     "restfulr": {
       "Package": "restfulr",
       "Version": "0.0.15",
@@ -2604,6 +2716,57 @@
         "utils"
       ],
       "Hash": "c0f51b4881738a1b72a3a9d7cbc11e39"
+    },
+    "sesame": {
+      "Package": "sesame",
+      "Version": "1.22.2",
+      "Source": "Bioconductor",
+      "Repository": "Bioconductor 3.19",
+      "Requirements": [
+        "BiocFileCache",
+        "BiocParallel",
+        "GenomeInfoDb",
+        "GenomicRanges",
+        "IRanges",
+        "MASS",
+        "R",
+        "S4Vectors",
+        "SummarizedExperiment",
+        "dplyr",
+        "ggplot2",
+        "graphics",
+        "grid",
+        "methods",
+        "preprocessCore",
+        "readr",
+        "reshape2",
+        "sesameData",
+        "stats",
+        "stringr",
+        "tibble",
+        "utils",
+        "wheatmap"
+      ],
+      "Hash": "5b16ccc1a60798d2f580b96e87afc08f"
+    },
+    "sesameData": {
+      "Package": "sesameData",
+      "Version": "1.22.0",
+      "Source": "Bioconductor",
+      "Repository": "Bioconductor 3.19",
+      "Requirements": [
+        "AnnotationHub",
+        "ExperimentHub",
+        "GenomeInfoDb",
+        "GenomicRanges",
+        "IRanges",
+        "R",
+        "S4Vectors",
+        "readr",
+        "stringr",
+        "utils"
+      ],
+      "Hash": "091809310e4ee435c7b72f530e684775"
     },
     "shape": {
       "Package": "shape",
@@ -3118,6 +3281,19 @@
         "later"
       ],
       "Hash": "e77c5569354172d0d04d54a9dec89e33"
+    },
+    "wheatmap": {
+      "Package": "wheatmap",
+      "Version": "0.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "RColorBrewer",
+        "colorspace",
+        "grid",
+        "stats"
+      ],
+      "Hash": "86e68df12fd98054449e8c7e91750988"
     },
     "withr": {
       "Package": "withr",

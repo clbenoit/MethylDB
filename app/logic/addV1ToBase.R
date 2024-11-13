@@ -63,10 +63,10 @@ addV1ToBase <- function(annotations, rawdata, db_path) {
   annotations <- "app/data/annotations/GSE225810_classes.csv"
   annotations <- read.table(annotations, header = TRUE, sep = ",")
   # Check if required columns are present
-  required_columns <- c("class", "subclass", "sample", "cohort")
+  required_columns <- c("class", "subclass", "sample", "cohort","chip")
   missing_columns <- setdiff(required_columns, names(annotations))
   if (length(missing_columns) > 0) {
-    return("Check file format")
+    print("Check file format")
   } else {
     print("All required columns are present")
   }
@@ -150,7 +150,7 @@ addV1ToBase <- function(annotations, rawdata, db_path) {
       filter(!(sample %in% annotations$sample))
     annotations <- rbind(annotations, annotations_old)
     #annotations <- annotations_old %>% left_join(annotations, by = "sample", suffix = c("",""))
-    annotations <- annotations[,c("sample","class","subclass","cohort")]
+    annotations <- annotations[,c("sample","class","subclass","cohort", "chip")]
     dbWriteTable(conn = con, "annotations", value = annotations, overwrite = TRUE)
   } else {
     print("write first annotations")

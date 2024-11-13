@@ -52,10 +52,10 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
 
   annotations <- read.table(annotations, header = TRUE, sep = ",")
   # Check if required columns are present
-  required_columns <- c("class", "subclass", "sample", "cohort")
+  required_columns <- c("class", "subclass", "sample", "cohort","chip")
   missing_columns <- setdiff(required_columns, names(annotations))
   if (length(missing_columns) > 0) {
-    return("Check file format")
+    print("Check file format")
   } else {
     print("All required columns are present")
   }
@@ -135,7 +135,7 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
     dbRemoveTable(conn = con, "BValsC_V2_temp")
 
   } else {
-    # If BValsC_V2 does not exist, create it directly with BValsC_V2 data
+    print("writing first BValsC_V2 table")
     dbWriteTable(conn = con, name = "BValsC_V2", value = BValsC_V2)
   }
 
@@ -146,7 +146,7 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
       filter(!(sample %in% annotations$sample))
     annotations <- rbind(annotations, annotations_old)
     #annotations <- annotations_old %>% left_join(annotations, by = "sample", suffix = c("",""))
-    annotations <- annotations[,c("sample","class","subclass","cohort")]
+    annotations <- annotations[,c("sample","class","subclass","cohort", "chip")]
     dbWriteTable(conn = con, "annotations", value = annotations, overwrite = TRUE)
   } else {
     print("write first annotations")
