@@ -55,7 +55,7 @@ addV1ToBase <- function(annotations, rawdata, db_path) {
   keep <- !(featureNames(mSetSqFlt) %in% annEPIC$Name[annEPIC$chr %in% c("chrX", "chrY")])
   mSetSqFlt <- mSetSqFlt[keep, ]
   BValsC <- as.data.frame(getBeta(mSetSqFlt))
-  BValsC <- BValsC[1:100,]
+  #BValsC <- BValsC[1:100,]
   BValsC$cgID <- rownames(BValsC)
   #MVals <- getM(mSetSqFlt)
 
@@ -144,12 +144,14 @@ addV1ToBase <- function(annotations, rawdata, db_path) {
     dbWriteTable(conn = con, name = "BValsC", value = BValsC)
   }
 
-
   if (dbExistsTable(conn = con, "annotations")) {
     print("merging annotations")
-    annotations_old <- dbReadTable(conn = con, "annotations")
-    annotations <- annotations_old %>% full_join(annotations, by = "sample")
-    dbWriteTable(conn = con, "annotations")
+    annotations_old <- dbReadTable(conn = con, "annotations") %>%
+      filter(!(sample %in% annotations$sample))
+    annotations <- rbind(annotations, annotations_old)
+    #annotations <- annotations_old %>% left_join(annotations, by = "sample", suffix = c("",""))
+    annotations <- annotations[,c("sample","class","subclass","cohort")]
+    dbWriteTable(conn = con, "annotations", value = annotations, overwrite = TRUE)
   } else {
     print("write first annotations")
     dbWriteTable(conn = con, "annotations", value = annotations)

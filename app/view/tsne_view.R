@@ -68,7 +68,9 @@ server <- function(id, con, appData, main_session) {
 
     output$sample_count <- reactive({
       req(appData$data$current_samples_dataframe)
-      print(nrow(appData$data$current_samples_dataframe))
+      #print(nrow(appData$data$current_samples_dataframe))
+      #print(utils::head(appData$data$current_samples_dataframe))
+
       return(nrow(appData$data$current_samples_dataframe))
     })
     shiny::outputOptions(output, "sample_count", suspendWhenHidden = FALSE)
@@ -81,24 +83,107 @@ server <- function(id, con, appData, main_session) {
 
     # Reactive for current t-SNE data frame
     current_tsne_dataframe <- reactive({
-      req(appData$data$BValsC, appData$data$current_samples_dataframe)
+      req(appData$data$BValsC, appData$data$current_samples_dataframe, appData$data$BValsC_V2)
+
       BValsC <- appData$data$BValsC
       rownames(BValsC) <- BValsC$cgID
       BValsC$cgId <- NULL
-      BValsC <- BValsC[, appData$data$current_samples_dataframe$sample]
-      selectVariables(data = na.omit(BValsC), method = "SD", no.variables = 25000, threads = 13)
-    }) %>% bindCache(list(appData$data$BValsC, appData$data$current_samples_dataframe))
+
+      # print(appData$data$current_samples_dataframe$sample)
+      # print(utils::head(BValsC))
+      BValsC <- BValsC[,(colnames(BValsC) %in% appData$data$current_samples_dataframe$sample)]
+
+      print("ada")
+
+      BValsC_V2 <- appData$data$BValsC_V2
+      #print(utils::head(BValsC_V2))
+
+      #rownames(BValsC_V2) <- BValsC_V2$cgID
+      #BValsC_V2$cgID <- NULL
+      #BValsC_V2$Row.names <- NULL
+      #print(utils::head(BValsC_V2))
+      #print(utils::head(BValsC_V2))
+
+      BValsC_V2 <- BValsC_V2[,(colnames(BValsC_V2) %in% appData$data$current_samples_dataframe$sample)]
+
+      # print(utils::head(BValsC))
+      # print(utils::head(BValsC_V2))
+      # print(ncol(BValsC))
+      # print(ncol(BValsC_V2))
+      print("cardano")
+
+      #merged_BValsC <- merge(BValsC, BValsC_V2, by = 0, all = TRUE)
+      #merge(as.F(BValsC), as.data.table(BValsC_V2), by = 0, all = TRUE)
+      #save(file = "/home/ptngs/test.rda", list = c("BValsC", "BValsC_V2", "merged_BValsC"))
+      #save(file = "/home/ptngs/test.rda", list = c("BValsC", "BValsC_V2"))
+
+      # head(BValsC)
+      # head(BValsC_V2)
+      # head(merged_BValsC)
+      # nrow(BValsC)
+      # nrow(BValsC_V2)
+      # nrow(merged_BValsC)
+      #
+      # a <- BValsC
+      # b <- BValsC_V2
+      data.table::setDT(BValsC, keep.rownames = TRUE)
+      data.table::setDT(BValsC_V2, keep.rownames = TRUE)
+      merged_BValsC <- as.data.frame(merge(BValsC, BValsC_V2, by = "rn", all = TRUE))
+      rownames(merged_BValsC) <- merged_BValsC$rn
+      merged_BValsC$rn <- NULL
+
+      # Perform the merge
+     # merged_BValsC <- merge(BValsC, BValsC_V2, by = "rn", all = TRUE)
+
+      #print(utils::head(merged_BValsC))
+      # rownames(merged_BValsC) <- merged_BValsC$Row.names
+      # merged_BValsC$Row.names <- NULL
+      #rownames(metas) <- betas
+      #print(utils::head(merged_BValsC))
+
+      # only_in_BValsC <- setdiff(BValsC$rn, BValsC_V2$rn)
+      # only_in_BValsC_V2 <- setdiff(BValsC_V2$rn, BValsC$rn)
+      # length(only_in_BValsC)  # Count of unique keys in BValsC
+      # length(only_in_BValsC_V2)  # Count of unique keys in BValsC_V2
+      # unmatched_BValsC <- BValsC[rn %in% only_in_BValsC]
+      # unmatched_BValsC_V2 <- BValsC_V2[rn %in% only_in_BValsC_V2]
+
+      print(utils::head(merged_BValsC))
+      save(file = "/home/ptngs/test.rda", list = c("BValsC", "BValsC_V2","merged_BValsC"))
+
+      selected_variables <- selectVariables(data = na.omit(merged_BValsC), method = "SD", no.variables = 25000, threads = 13)
+      #print("selected variables")
+      #print(utils::head(selected_variables))
+      return(selected_variables)
+      #print("a")
+      #selectVariables(data = na.omit(merged_BValsC), method = "SD", no.variables = 25000, threads = 13)
+
+    }) #%>% bindCache(list(appData$data$BValsC, appData$data$BValsC_V2, appData$data$current_samples_dataframe))
 
     # Reactive for current t-SNE model
     current_tsne_model <- reactive({
       req(current_tsne_dataframe())
-      modelTsne(current_tsne_dataframe(), perplexity = 1, dims = 2)
-    }) %>% bindCache(current_tsne_dataframe())
+      print("modelTsne")
+      print(utils::head(current_tsne_dataframe()))
+      model <- modelTsne(current_tsne_dataframe(), perplexity = 1, dims = 2)
+      #print(names(model))
+      #print(utils::head(model))
+      #print(utils::head(model$df.tsne))
+      #print("model computed")
+      return(model)
+    }) #%>% bindCache(current_tsne_dataframe())
 
     # Render t-SNE plot
     output$current_tsne_plot <- renderPlotly({
       req(current_tsne_model(), appData$data$current_samples_dataframe, input$color_by)
       df <- current_tsne_model()$df.tsne
+      #df <- current_tsne_model()
+
+      # print(utils::head(df))
+      # print(utils::head(appData$data$current_samples_dataframe))
+      # print(nrow(df))
+      # print(nrow(appData$data$current_samples_dataframe))
+      #color <- appData$data$current_samples_dataframe[, input$color_by]
 
       plot_ly(
         x = df$tsne.dim1, y = df$tsne.dim2,

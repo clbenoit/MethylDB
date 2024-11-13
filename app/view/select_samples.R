@@ -104,7 +104,7 @@ server <- function(id, con, appData, main_session) {
     observeEvent(input$select_cohorts, {
       req(input$select_cohorts)
       appData$selectors$cohorts<- input$select_cohorts
-      print(appData$selectors$cohorts)
+      #print(appData$selectors$cohorts)
     })
 
     # Reactive for validation messages
