@@ -14,12 +14,9 @@ box::use(
 addV1ToBase <- function(annotations, rawdata, db_path) {
 
   library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
-  # library(IlluminaHumanMethylation450kmanifest)
   library(minfi)
   library(DBI)
   library(RSQLite)
-  # library(ComplexHeatmap)
-  # library(IlluminaHumanMethylationEPICmanifest)
   library(dplyr)
 
   rawdata <- "app/data/testdata/EPICv1/"
@@ -93,6 +90,8 @@ addV1ToBase <- function(annotations, rawdata, db_path) {
     columns_to_update <- columns_to_update[columns_to_update != "cgID"]
 
     # Step 3: Dynamically build the SET clause for the UPDATE statement
+    if(length(columns_to_update) > 0){
+
     set_clause <- paste(
       sprintf("%s = (SELECT %s FROM BValsC_temp WHERE BValsC.cgID = BValsC_temp.cgID)",
               columns_to_update, columns_to_update),
@@ -108,6 +107,7 @@ addV1ToBase <- function(annotations, rawdata, db_path) {
 
     # Execute the update query
     dbExecute(conn = con, update_query)
+    }
 
     # Step 4: Insert new rows from BValsC_temp where cgID is not present in BValsC
     insert_query <- sprintf("
@@ -120,10 +120,7 @@ addV1ToBase <- function(annotations, rawdata, db_path) {
     dbExecute(conn = con, insert_query)
 
     # Step 5: Add new columns in BValsC for any columns unique to BValsC_temp
-    new_columns <- setdiff(temp_columns, existing_columns)
-    new_columns <- new_columns[new_columns != "cgID"]
-
-    for (col in new_columns) {
+    for (col in columns_to_update) {
       # Assuming all new columns are of type REAL; adjust as necessary
       alter_query <- sprintf("ALTER TABLE BValsC ADD COLUMN %s REAL", col)
       dbExecute(conn = con, alter_query)
@@ -141,6 +138,7 @@ addV1ToBase <- function(annotations, rawdata, db_path) {
 
   } else {
     # If BValsC does not exist, create it directly with BValsC data
+    print("writing first BValsC table")
     dbWriteTable(conn = con, name = "BValsC", value = BValsC)
   }
 

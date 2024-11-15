@@ -44,15 +44,11 @@ appDataManager <- R6::R6Class(
       if (dbExistsTable(conn = con, "BValsC_V2")) {
         print("Loading V2 Beta values")
         BValsC_V2 <- DBI::dbReadTable(conn = con, name = "BValsC_V2")
-        # print(utils::head(BValsC_V2))
 
         rownames(BValsC_V2) <- BValsC_V2$cgID
         BValsC_V2$cgID <- NULL
-        #save(file = "/home/ptngs/test.rda", BValsC_V2)
         #a <- as.data.frame(mLiftOver(x = BValsC_V2, target_platform = "HM450"))
-        BValsC_V2 <- as.data.frame(mLiftOver(x = as.matrix(BValsC_V2), target_platform = "HM450"))
-        print(nrow(BValsC_V2))
-        print(utils::head(BValsC_V2))
+        #BValsC_V2 <- as.data.frame(mLiftOver(x = as.matrix(BValsC_V2), target_platform = "HM450"))
         self$data$BValsC_V2 <- BValsC_V2
       } else {
         print("Can't find V2 beta values table in base, check you database")

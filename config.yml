@@ -3,7 +3,7 @@ default:
   app_prod: no
   cache_directory: default
   db_path: "app/data/testdata"
-  prefix: "test"
+  prefix: "testdb"
   app_title: "My App"
 
 
@@ -12,7 +12,7 @@ production:
   app_prod: no
   cache_directory: default
   db_path: "app/data/testdata"
-  prefix: "test"
+  prefix: "testdb"
   app_title: "My App"
 
 
@@ -21,7 +21,7 @@ demo:
   app_prod: no
   cache_directory: default
   db_path: "app/data/testdata"
-  prefix: "test"
+  prefix: "testdb"
   app_title: "My App"
 
 

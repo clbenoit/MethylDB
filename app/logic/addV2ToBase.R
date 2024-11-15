@@ -13,26 +13,13 @@ box::use(
 #' @export
 addV2ToBase <- function(annotations, rawdata, db_path) {
 
-  # library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
-  # # library(IlluminaHumanMethylation450kmanifest)
-  # library(minfi)
-  # library(DBI)
-  # library(RSQLite)
-  # # library(ComplexHeatmap)
-  # # library(IlluminaHumanMethylationEPICmanifest)
   library(sesame)
   library(DBI)
   library(RSQLite)
-  # library(ComplexHeatmap)
-  # library(IlluminaHumanMethylationEPICmanifest)
   library(dplyr)
 
   rawdata <- "app/data/testdata/EPICv2/"
   betas <- openSesame(rawdata, platform = "EPICv2")
-  print(head(betas))
-  #BValsC_V2 <- mLiftOver(x = BValsC_V2, target_platform = "HM450")
-
-  #puce_samples <- colnames(betas)
 
   # Transform EPICV2 into a 850K dataframe
   ###### ATTENTION ON FAIT LE SHIFT AVANT BASE CAR ON PEUT TESTER QUE SUR 100 LIGNES ET ON VEUT SASSURER
@@ -41,13 +28,6 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
   BValsC_V2 <- as.data.frame(betas)
   # BValsC_V2 <- na.omit(BValsC_V2)[1:100,]
 
-  # Ensure both datasets have the same CpGs
-  # Necessary when different CHIP types are mixed
-  # betas <- betas %>%
-  #   filter(row.names(betas) %in% rownames(BValsC_V2))
-
-  # Print message if any required column is missing
-  #annotations <- "app/data/annotations/GSE225810_classes.csv"
   annotations <- "app/data/annotations/GSE109381_classes.csv"
 
   annotations <- read.table(annotations, header = TRUE, sep = ",")
@@ -62,10 +42,6 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
 
   colnames(BValsC_V2) <- gsub("_.*", "", colnames(BValsC_V2))
   annotations <- annotations %>% dplyr::filter(sample %in% colnames(BValsC_V2))
-  # annotations$sample <- as.character(annotations$sample)
-  # colnames_BValsC_V2 <- as.character(colnames(BValsC_V2))
-  # annotations <- as.data.frame(annotations) %>% dplyr::filter(sample %in% colnames_BValsC_V2)
-  #annotations <- annotations[,which(annotations$sample %in% colnames(BValsC_V2))]
   BValsC_V2$cgID <- rownames(BValsC_V2)
   BValsC_V2 <- BValsC_V2[, c(annotations$sample, "cgID")]
 
@@ -87,7 +63,8 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
     columns_to_update <- intersect(existing_columns, temp_columns)
     columns_to_update <- columns_to_update[columns_to_update != "cgID"]
 
-    # Step 3: Dynamically build the SET clause for the UPDATE statement
+    #Step 3: Dynamically build the SET clause for the UPDATE statement
+    if(length(columns_to_update) > 0){
     set_clause <- paste(
       sprintf("%s = (SELECT %s FROM BValsC_V2_temp WHERE BValsC_V2.cgID = BValsC_V2_temp.cgID)",
               columns_to_update, columns_to_update),
@@ -103,6 +80,7 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
 
     # Execute the update query
     dbExecute(conn = con, update_query)
+    }
 
     # Step 4: Insert new rows from BValsC_V2_temp where cgID is not present in BValsC_V2
     insert_query <- sprintf("
@@ -115,10 +93,7 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
     dbExecute(conn = con, insert_query)
 
     # Step 5: Add new columns in BValsC_V2 for any columns unique to BValsC_V2_temp
-    new_columns <- setdiff(temp_columns, existing_columns)
-    new_columns <- new_columns[new_columns != "cgID"]
-
-    for (col in new_columns) {
+    for (col in columns_to_update) {
       # Assuming all new columns are of type REAL; adjust as necessary
       alter_query <- sprintf("ALTER TABLE BValsC_V2 ADD COLUMN %s REAL", col)
       dbExecute(conn = con, alter_query)

@@ -95,11 +95,13 @@ server <- function(id, con, appData, main_session) {
 
       BValsC_V2 <- BValsC_V2[,(colnames(BValsC_V2) %in% appData$data$current_samples_dataframe$sample)]
 
-      data.table::setDT(BValsC, keep.rownames = TRUE)
-      data.table::setDT(BValsC_V2, keep.rownames = TRUE)
-      merged_BValsC <- as.data.frame(merge(BValsC, BValsC_V2, by = "rn", all = TRUE))
-      rownames(merged_BValsC) <- merged_BValsC$rn
-      merged_BValsC$rn <- NULL
+      print("merging V1 and V2 beta values")
+      # data.table::setDT(BValsC, keep.rownames = TRUE)
+      # data.table::setDT(BValsC_V2, keep.rownames = TRUE)
+      # merged_BValsC <- as.data.frame(merge(BValsC, BValsC_V2, by = "rn", all = TRUE))
+      # rownames(merged_BValsC) <- merged_BValsC$rn
+      # merged_BValsC$rn <- NULL
+      merged_BValsC <- BValsC_V2
 
       selected_variables <- selectVariables(data = na.omit(merged_BValsC), method = "SD", no.variables = 25000, threads = 13)
       return(selected_variables)

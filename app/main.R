@@ -80,10 +80,11 @@ server <- function(id) {
     }
 
     ## load database ##
-    # db_name <- file.path(get("db_path"), paste0(get("prefix"), ".db"))
-    # con <- dbConnect(SQLite(), db_name)
-    db_name <- file.path("app/data/testdata", "testdb.db")
+    db_name <- file.path(get("db_path"), paste0(get("prefix"), ".db"))
+    print(paste0("db name :", db_name))
     con <- dbConnect(SQLite(), db_name)
+    #db_name <- file.path("app/data/testdata", "testdb.db")
+    #con <- dbConnect(SQLite(), db_name)
 
     appDataManager <- appDataManager$new()
     appDataManager$loadAppData(con)

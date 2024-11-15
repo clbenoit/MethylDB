@@ -113,7 +113,6 @@ server <- function(id, con, appData, main_session) {
     observeEvent(input$select_cohorts, {
       req(input$select_cohorts)
       appData$selectors$cohorts<- input$select_cohorts
-      #print(appData$selectors$cohorts)
     })
 
     # Reactive for validation messages
@@ -131,36 +130,64 @@ server <- function(id, con, appData, main_session) {
     })
 
     # Reactive to compute current_samples_dataframe
-    current_samples_dataframe <- reactive({
+    current_samples_dataframe_class <- reactive({
       # Check validation message and return an empty dataframe if validation fails
       if (!is.null(validation_message())) {
         appData$data$current_samples_dataframe <- data.frame()
         return(data.frame())
       }
 
-      print("Filtering samples...")
-      current_samples_dataframe <- all_samples_dataframe() %>%
+      print("Filtering samples according to class...")
+      current_samples_dataframe_class <- all_samples_dataframe() %>%
         {
           if (!("All" %in% appData$selectors$classes)) {
             filter(., class %in% appData$selectors$classes)
           } else {
             .
           }
-        } %>%
+      } #
+      return(current_samples_dataframe_class)
+    })
+
+    current_samples_dataframe_class_subclass <- reactive({
+
+      req(current_samples_dataframe_class())
+      if(nrow(current_samples_dataframe_class() >= 1)){
+      print("Filtering samples according to subclass...")
+
+      current_samples_dataframe_class_subclass <- current_samples_dataframe_class() %>%
         {
           if (!("All" %in% appData$selectors$subclasses)) {
             filter(., subclass %in% appData$selectors$subclasses)
           } else {
             .
           }
-        } %>%
+        }
+      return(current_samples_dataframe_class_subclass)
+      }
+    })
+
+    current_samples_dataframe_class_subclass_cohort <- reactive({
+
+      req(current_samples_dataframe_class_subclass())
+      print("Filtering samples according to cohort...")
+
+      current_samples_dataframe_class_subclass_cohort <- current_samples_dataframe_class_subclass() %>%
         {
           if (!("All" %in% appData$selectors$cohorts)) {
             filter(., cohort %in% appData$selectors$cohorts)
           } else {
             .
           }
-        } %>%
+        }
+        return(current_samples_dataframe_class_subclass_cohort)
+    })
+
+    current_samples_dataframe <- reactive({
+
+      req(current_samples_dataframe_class_subclass_cohort())
+      print("Filtering samples according to chip...")
+      current_samples_dataframe <- current_samples_dataframe_class_subclass_cohort() %>%
         {
           if (!("All" %in% appData$selectors$chips)) {
             filter(., chip %in% appData$selectors$chips)
@@ -168,10 +195,13 @@ server <- function(id, con, appData, main_session) {
             .
           }
         }
-
       appData$data$current_samples_dataframe <- current_samples_dataframe
       return(current_samples_dataframe)
     })
+      #
+    #   # appData$data$current_samples_dataframe <- current_samples_dataframe
+    #   # return(current_samples_dataframe)
+    # })
 
     # UI to display validation message if any
     output$validation_message_ui <- renderUI({
@@ -180,7 +210,6 @@ server <- function(id, con, appData, main_session) {
         div(class = "alert alert-warning", msg)
       }
     })
-
     # Place this in the UI where you want the validation message to appear
     output$selected_samples_info <- renderUI({
       tagList(
