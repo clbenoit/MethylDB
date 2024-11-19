@@ -11,15 +11,16 @@ box::use(
 )
 
 #' @export
-addV2ToBase <- function(annotations, rawdata, db_path) {
+addV2ToBase <- function(annotations, rawdata, db_path = NULL) {
 
-  library(sesame)
-  library(DBI)
-  library(RSQLite)
-  library(dplyr)
-
+  # library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+  # library(minfi)
+  # library(DBI)
+  # library(RSQLite)
+  # library(dplyr)
+  #
   rawdata <- "app/data/testdata/EPICv2/"
-  betas <- openSesame(rawdata, platform = "EPICv2")
+  betas <- openSesame(rawdata, platform = "EPICv2", BPPARAM = BiocParallel::MulticoreParam(workers = 13))
 
   # Transform EPICV2 into a 850K dataframe
   ###### ATTENTION ON FAIT LE SHIFT AVANT BASE CAR ON PEUT TESTER QUE SUR 100 LIGNES ET ON VEUT SASSURER
@@ -28,7 +29,7 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
   BValsC_V2 <- as.data.frame(betas)
   # BValsC_V2 <- na.omit(BValsC_V2)[1:100,]
 
-  annotations <- "app/data/annotations/GSE109381_classes.csv"
+  annotations <- "app/data/annotations/GSE225810_classes.csv"
 
   annotations <- read.table(annotations, header = TRUE, sep = ",")
   # Check if required columns are present
@@ -40,80 +41,83 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
     print("All required columns are present")
   }
 
-  colnames(BValsC_V2) <- gsub("_.*", "", colnames(BValsC_V2))
+  # colnames(BValsC_V2) <- gsub("_.*", "", colnames(BValsC_V2))
   annotations <- annotations %>% dplyr::filter(sample %in% colnames(BValsC_V2))
   BValsC_V2$cgID <- rownames(BValsC_V2)
   BValsC_V2 <- BValsC_V2[, c(annotations$sample, "cgID")]
 
   # Save data into database
+  #db_path <- "/home/T_SNE/data/dbs/CHUGA_V2.db"
   db_path <- file.path("app/data/testdata", "testdb.db")
   con <- dbConnect(SQLite(), db_path)
 
   if (dbExistsTable(conn = con, "BValsC_V2")) {
     print("merging BValsC_V2 tables")
 
+
     # Step 1: Write the new data to a temporary table
     dbWriteTable(conn = con, name = "BValsC_V2_temp", value = BValsC_V2, overwrite = TRUE)
 
-    # Step 2: Get the column names for both tables
     existing_columns <- dbGetQuery(con, "PRAGMA table_info(BValsC_V2)")$name
     temp_columns <- dbGetQuery(con, "PRAGMA table_info(BValsC_V2_temp)")$name
 
-    # Exclude the primary key "cgID" from update columns
-    columns_to_update <- intersect(existing_columns, temp_columns)
-    columns_to_update <- columns_to_update[columns_to_update != "cgID"]
+    # Step 2: Determine columns to update (existing columns) and columns to add (new columns)
+    columns_to_update <- setdiff(intersect(existing_columns, temp_columns), "cgID")
+    columns_to_add <- setdiff(temp_columns, existing_columns)
 
-    #Step 3: Dynamically build the SET clause for the UPDATE statement
-    if(length(columns_to_update) > 0){
-    set_clause <- paste(
-      sprintf("%s = (SELECT %s FROM BValsC_V2_temp WHERE BValsC_V2.cgID = BValsC_V2_temp.cgID)",
-              columns_to_update, columns_to_update),
-      collapse = ", "
-    )
+    if (length(columns_to_add) > 0) {
+      message("Adding new columns to BValsC_V2...")
+      for (col in columns_to_add) {
+        # Get the column type from the temporary table
+        table_info <- dbGetQuery(con, "PRAGMA table_info(BValsC_V2_temp)")
+        col_type <- table_info$type[table_info$name == col]
 
-    # Update existing rows based on cgID for matching columns
-    update_query <- sprintf("
+        # Check if col_type is found
+        if (length(col_type) > 0) {
+          alter_query <- sprintf("ALTER TABLE BValsC_V2 ADD COLUMN \"%s\" %s", col, col_type)
+          dbExecute(con, alter_query)
+        } else {
+          warning(sprintf("Column '%s' not found in BValsC_V2_temp schema.", col))
+        }
+      }
+    }
+
+    # Step 4: Update existing columns and new columns in a single query
+    all_columns_to_update <- c(columns_to_update, columns_to_add)
+    if (length(all_columns_to_update) > 0) {
+      message("Updating columns in BValsC_V2...")
+
+      # Generate the SET clause for updating all relevant columns
+      populate_clause <- paste(
+        sprintf('"%s" = "BValsC_V2_temp"."%s"', all_columns_to_update, all_columns_to_update),
+        collapse = ", "
+      )
+
+      # Construct the update query
+      populate_query <- sprintf("
     UPDATE BValsC_V2
     SET %s
-    WHERE EXISTS (SELECT 1 FROM BValsC_V2_temp WHERE BValsC_V2.cgID = BValsC_V2_temp.cgID)
-    ", set_clause)
+    FROM BValsC_V2_temp
+    WHERE BValsC_V2.cgID = BValsC_V2_temp.cgID
+  ", populate_clause)
 
-    # Execute the update query
-    dbExecute(conn = con, update_query)
+      # Print the query for debugging
+      print(populate_query)
+
+      # Execute the update query within a transaction for better performance
+      dbBegin(con)
+      dbExecute(con, populate_query)
+      dbCommit(con)
+
+      message("Columns updated successfully.")
+
+      # Step 5: Drop the temporary table
+      dbRemoveTable(con, "BValsC_V2_temp")
     }
-
-    # Step 4: Insert new rows from BValsC_V2_temp where cgID is not present in BValsC_V2
-    insert_query <- sprintf("
-    INSERT INTO BValsC_V2 (%s)
-    SELECT %s FROM BValsC_V2_temp
-    WHERE cgID NOT IN (SELECT cgID FROM BValsC_V2)
-  ", paste(temp_columns, collapse = ", "), paste(temp_columns, collapse = ", "))
-
-    # Execute the insert query
-    dbExecute(conn = con, insert_query)
-
-    # Step 5: Add new columns in BValsC_V2 for any columns unique to BValsC_V2_temp
-    for (col in columns_to_update) {
-      # Assuming all new columns are of type REAL; adjust as necessary
-      alter_query <- sprintf("ALTER TABLE BValsC_V2 ADD COLUMN %s REAL", col)
-      dbExecute(conn = con, alter_query)
-
-      # Now, populate the new columns with data from BValsC_V2_temp
-      populate_query <- sprintf("
-      UPDATE BValsC_V2
-      SET %s = (SELECT %s FROM BValsC_V2_temp WHERE BValsC_V2.cgID = BValsC_V2_temp.cgID)
-      WHERE EXISTS (SELECT 1 FROM BValsC_V2_temp WHERE BValsC_V2.cgID = BValsC_V2_temp.cgID)
-    ", col, col)
-      dbExecute(conn = con, populate_query)
-    }
-    # Step 6: Drop the temporary table after the merge
-    dbRemoveTable(conn = con, "BValsC_V2_temp")
-
   } else {
     print("writing first BValsC_V2 table")
     dbWriteTable(conn = con, name = "BValsC_V2", value = BValsC_V2)
   }
-
 
   if (dbExistsTable(conn = con, "annotations")) {
     print("merging annotations")
@@ -127,7 +131,4 @@ addV2ToBase <- function(annotations, rawdata, db_path) {
     print("write first annotations")
     dbWriteTable(conn = con, "annotations", value = annotations)
   }
-
-
 }
-

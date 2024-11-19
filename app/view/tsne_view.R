@@ -12,7 +12,8 @@ box::use(
   plotly[plotlyOutput, renderPlotly, layout, plot_ly,
          plotlyProxy, plotlyProxyInvoke],
   htmlwidgets[onRender],
-  bslib[card, card_header, card_body, value_box, layout_column_wrap]
+  bslib[card, card_header, card_body, value_box, layout_column_wrap],
+  shinybusy[remove_modal_spinner, show_modal_spinner],
 )
 
 box::use(
@@ -77,13 +78,15 @@ server <- function(id, con, appData, main_session) {
 
     # Update selectInput choices dynamically
     observeEvent(appData$data$current_samples_dataframe$sample, {
-      updateSelectInput(session, inputId = "sample_selector",
-                               choices = appData$data$current_samples_dataframe$sample)
+      updateSelectizeInput(session, inputId = "sample_selector",
+                               choices = appData$data$current_samples_dataframe$sample,
+                        server = TRUE)
     })
 
     # Reactive for current t-SNE data frame
     current_tsne_dataframe <- reactive({
-      req(appData$data$BValsC, appData$data$current_samples_dataframe, appData$data$BValsC_V2)
+      #req(appData$data$BValsC)
+      req(appData$data$current_samples_dataframe, appData$data$BValsC_V2)
 
       BValsC <- appData$data$BValsC
       rownames(BValsC) <- BValsC$cgID
@@ -103,24 +106,37 @@ server <- function(id, con, appData, main_session) {
       # merged_BValsC$rn <- NULL
       merged_BValsC <- BValsC_V2
 
+      show_modal_spinner(
+        spin = "double-bounce", color = "#112446",
+        text = "Selecting more variable CpGs...")
       selected_variables <- selectVariables(data = na.omit(merged_BValsC), method = "SD", no.variables = 25000, threads = 13)
+      remove_modal_spinner()
       return(selected_variables)
 
-    }) #%>% bindCache(list(appData$data$BValsC, appData$data$BValsC_V2, appData$data$current_samples_dataframe))
+
+    }) %>% bindCache(list(appData$data$BValsC_V2, appData$data$current_samples_dataframe))
+    #%>% bindCache(list(appData$data$BValsC, appData$data$BValsC_V2, appData$data$current_samples_dataframe))
 
     # Reactive for current t-SNE model
     current_tsne_model <- reactive({
       req(current_tsne_dataframe())
       print("modelTsne")
+      show_modal_spinner(
+        spin = "double-bounce", color = "#112446",
+        text = "Buidling T SNE model...")
       model <- modelTsne(current_tsne_dataframe(), perplexity = 1, dims = 2)
+      remove_modal_spinner()
       return(model)
-    }) #%>% bindCache(current_tsne_dataframe())
+    }) %>% bindCache(current_tsne_dataframe())
 
     # Render t-SNE plot
     output$current_tsne_plot <- renderPlotly({
       req(current_tsne_model(), appData$data$current_samples_dataframe, input$color_by)
       df <- current_tsne_model()$df.tsne
 
+      show_modal_spinner(
+        spin = "double-bounce", color = "#112446",
+        text = "Ploting T SNE...")
       plot_ly(
         x = df$tsne.dim1, y = df$tsne.dim2,
         type = "scatter", mode = "markers",
@@ -144,6 +160,8 @@ server <- function(id, con, appData, main_session) {
           });
         }
       ", ns("sample_click")))
+      remove_modal_spinner()
+
     })
 
     # Observe plotly click to update selectInput for multiple selections
@@ -154,7 +172,7 @@ server <- function(id, con, appData, main_session) {
       # Update selectInput to include clicked sample if not already selected
       if (!sample_name %in% selected_samples) {
         selected_samples <- c(selected_samples, sample_name)
-        updateSelectInput(session, "sample_selector", selected = selected_samples)
+        updateSelectizeInput(session, "sample_selector", selected = selected_samples, server = TRUE)
       }
     })
 

@@ -1,11 +1,13 @@
 box::use(
-  stats[na.omit],
+  stats[na.omit,IQR],
+  doParallel[registerDoParallel],
+  foreach[`%dopar%`, foreach]
 )
 
 doANOVA <- function(group,data.row){
   if(max(data.row, na.rm=TRUE) - min(data.row, na.rm=TRUE) != 0){
     names(group)<-names(data.row)
-    data.sub<-data.frame(variable=data.row,group=group)
+    data.sub<-data.frame(variable=data.row,group=group, check.names = FALSE)
     colnames(data.sub)<-c("variable","group")
     data.sub<-data.sub[is.finite(data.sub$variable),]
     p.value<-summary(aov(variable~group,data=data.sub))[[1]]['group','Pr(>F)']
@@ -18,7 +20,7 @@ doANOVA <- function(group,data.row){
 doLogistic <- function(group,data.row){
   if(max(data.row, na.rm=TRUE) - min(data.row, na.rm=TRUE) != 0){
     names(group)<-names(data.row)
-    data.sub<-data.frame(variable=data.row,group=group)
+    data.sub<-data.frame(variable=data.row,group=group, check.names = FALSE)
     colnames(data.sub)<-c("variable","group")
     data.sub<-data.sub[is.finite(data.sub$variable),]
     fit.binomial<-glm(formula=as.formula("group~variable"),data=data.sub,family=binomial)
@@ -85,15 +87,15 @@ selectVariables <- function(data = NULL, no.variables = 10000,
   data.sel<-NULL
   message("\tRunning with ",threads," cores")
   if(method %in% c("IQR","SD")){
-    myFunc<-IQR
-    if(method=="SD"){myFunc<-sd}
+    myFunc<-stats::IQR
+    if(method=="SD"){myFunc<-stats::sd}
     if(threads==1){
       result<-foreach(chunks=chop(data),.combine='c') %do% { apply(chunks,1,function(x) myFunc(x,na.rm = TRUE))}
     }else{
-      cl <- makeCluster(threads)
+      cl <- parallel::makeCluster(threads)
       registerDoParallel(cl)
       result<-foreach(chunks=chop(data),.combine='c') %dopar% { apply(chunks,1,function(x) myFunc(x,na.rm = TRUE))}
-      stopCluster(cl)
+      parallel::stopCluster(cl)
     }
     threshold.result<-sort(result,decreasing=TRUE)[no.variables]
     data.sel<-data[result>=threshold.result,]
@@ -105,16 +107,16 @@ selectVariables <- function(data = NULL, no.variables = 10000,
     if(threads==1){
       p.value<-foreach(chunks=chop(data),.combine='c') %do% { apply(chunks,1,function(x) myFunc(group,x))}
     }else{
-      cl <- makeCluster(threads)
+      cl <- parallel::makeCluster(threads)
       registerDoParallel(cl)
       p.value<-foreach(chunks=chop(data),.combine='c') %dopar% { apply(chunks,1,function(x) myFunc(group,x))}
-      stopCluster(cl)
+      parallel::stopCluster(cl)
     }
     cutoff<-sort(p.value)[no.variables]
     data.sel<-data[p.value<=cutoff,]
 
     if(!is.null(file.stats)){
-      df<-data.frame(sample=row.names(data),p.value)
+      df<-data.frame(sample=row.names(data),p.value, check.rows = FALSE, check.names = FALSE)
       groups<-unique(group)
       for(group.curr in groups){
         df<-cbind(df,rowMeans(data[,group==group.curr],na.rm=TRUE))
@@ -125,6 +127,6 @@ selectVariables <- function(data = NULL, no.variables = 10000,
   }
 
   message("\tOutput: ",ncol(data.sel)," samples, ",nrow(data.sel)," variables")
-  return(data.frame(data.sel))
+  return(data.frame(data.sel, check.names = FALSE))
 }
 
