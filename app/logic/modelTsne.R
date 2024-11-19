@@ -18,7 +18,7 @@ modelTsne <- function(data = NULL, group = NULL, perplexity = NULL,
     data[do.fix,c]<-mean.row[do.fix]
   }
   tsne_out <- Rtsne(t(data),perplexity=perplexity,check_duplicates = FALSE,dims=dims,eta=eta,theta=theta)
-  df.tsne<-data.frame(sample=colnames(data),tsne_out$Y,group)
+  df.tsne<-data.frame(sample=colnames(data),tsne_out$Y,group, check.names = FALSE)
   colnames(df.tsne)<-c("sample",paste0("tsne.dim",1:dims),"group")
   modelTsne<-list(df.tsne=df.tsne, data=NULL,perplexity=perplexity,dims=dims,eta=eta,theta=theta)
   if(persistent){modelTsne$data<-data}

@@ -21,7 +21,6 @@ appDataManager <- R6::R6Class(
     loadAppData = function(con) {
       print("inside load DB")
       self$con <- con
-      #print(con)
       shinybusy::show_modal_spinner(
         spin = "double-bounce", color = "#112446",
         text = "Loading database metadata")
@@ -29,21 +28,21 @@ appDataManager <- R6::R6Class(
       # Different sidebars according to selected tab
       if (dbExistsTable(conn = con, "annotations")) {
         print("Loading annotations")
-        self$data$annotations <- DBI::dbReadTable(conn = con, name = "annotations")
+        self$data$annotations <- DBI::dbReadTable(conn = con, name = "annotations", check.names = FALSE)
       } else {
         print("Can't find annotations table in base, check you database")
       }
 
       if (dbExistsTable(conn = con, "BValsC")) {
         print("Loading V1 Beta values")
-        self$data$BValsC <- DBI::dbReadTable(conn = con, name = "BValsC")
+        self$data$BValsC <- DBI::dbReadTable(conn = con, name = "BValsC", check.names = FALSE)
       } else {
         print("Can't find V1 beta values table in base, check you database")
       }
 
       if (dbExistsTable(conn = con, "BValsC_V2")) {
         print("Loading V2 Beta values")
-        BValsC_V2 <- DBI::dbReadTable(conn = con, name = "BValsC_V2")
+        BValsC_V2 <- DBI::dbReadTable(conn = con, name = "BValsC_V2", check.names = FALSE)
 
         rownames(BValsC_V2) <- BValsC_V2$cgID
         BValsC_V2$cgID <- NULL
